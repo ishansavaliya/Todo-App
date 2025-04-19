@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,39 +23,64 @@ type ToDoType = {
   isDone: boolean;
 };
 
-export default function Index() {
-  const todoData = [
-    {
-      id: 1,
-      title: "Todo 1",
-      isDone: false,
-    },
-    {
-      id: 2,
-      title: "Todo 2",
-      isDone: false,
-    },
-    {
-      id: 3,
-      title: "Todo 3",
-      isDone: false,
-    },
-    {
-      id: 4,
-      title: "Todo 4",
-      isDone: true,
-    },
-    {
-      id: 5,
-      title: "Todo 5",
-      isDone: false,
-    },
-  ];
+// Define theme colors
+const theme = {
+  light: {
+    background: "#f5f5f5",
+    text: "#333",
+    card: "#fff",
+    primary: "#3599ea",
+  },
+  dark: {
+    background: "#121212",
+    text: "#e0e0e0",
+    card: "#1e1e1e",
+    primary: "#4dabff",
+  },
+};
 
+export default function Index() {
+  const systemColorScheme = useColorScheme();
+  const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
   const [todos, setTodos] = useState<ToDoType[]>([]);
   const [todoText, setTodoText] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [oldTodos, setOldTodos] = useState<ToDoType[]>([]);
+
+  // Get current theme colors
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+
+  // Load theme preference
+  useEffect(() => {
+    const loadThemePreference = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem("theme-preference");
+        if (savedTheme !== null) {
+          setIsDarkMode(savedTheme === "dark");
+        } else {
+          setIsDarkMode(systemColorScheme === "dark");
+        }
+      } catch (error) {
+        console.log("Error loading theme preference:", error);
+        setIsDarkMode(systemColorScheme === "dark");
+      }
+    };
+    loadThemePreference();
+  }, [systemColorScheme]);
+
+  // Toggle theme function
+  const toggleTheme = async () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    try {
+      await AsyncStorage.setItem(
+        "theme-preference",
+        newTheme ? "dark" : "light"
+      );
+    } catch (error) {
+      console.log("Error saving theme preference:", error);
+    }
+  };
 
   useEffect(() => {
     const getTodos = async () => {
@@ -132,10 +158,19 @@ export default function Index() {
   }, [searchQuery]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: currentTheme.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => {}}>
-          <Ionicons name="menu" size={24} color="#333" />
+          <Ionicons name="menu" size={24} color={currentTheme.text} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={toggleTheme}>
+          <Ionicons
+            name={isDarkMode ? "sunny" : "moon"}
+            size={24}
+            color={currentTheme.text}
+          />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => {}}>
           <Image
@@ -146,13 +181,14 @@ export default function Index() {
           />
         </TouchableOpacity>
       </View>
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={24} color="#333" />
+      <View style={[styles.searchBar, { backgroundColor: currentTheme.card }]}>
+        <Ionicons name="search" size={24} color={currentTheme.text} />
         <TextInput
           placeholder="Search"
+          placeholderTextColor={currentTheme.text}
           value={searchQuery}
           onChangeText={(text) => setSearchQuery(text)}
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: currentTheme.text }]}
           clearButtonMode="always"
         />
       </View>
@@ -165,6 +201,7 @@ export default function Index() {
             todo={item}
             deleteTodo={deleteTodo}
             handleDone={handleDone}
+            currentTheme={currentTheme}
           />
         )}
       />
@@ -176,12 +213,19 @@ export default function Index() {
       >
         <TextInput
           placeholder="Add New ToDo"
+          placeholderTextColor={currentTheme.text}
           value={todoText}
           onChangeText={(Text) => setTodoText(Text)}
-          style={styles.newTodoInput}
+          style={[
+            styles.newTodoInput,
+            { backgroundColor: currentTheme.card, color: currentTheme.text },
+          ]}
           autoCorrect={false}
         />
-        <TouchableOpacity style={styles.addButton} onPress={() => addTodo()}>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: currentTheme.primary }]}
+          onPress={() => addTodo()}
+        >
           <Ionicons name="add" size={34} color="#fff" />
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -193,22 +237,25 @@ const ToDoItem = ({
   todo,
   deleteTodo,
   handleDone,
+  currentTheme,
 }: {
   todo: ToDoType;
   deleteTodo: (id: number) => void;
   handleDone: (id: number) => void;
+  currentTheme: any;
 }) => (
-  <View style={styles.todoContainer}>
+  <View style={[styles.todoContainer, { backgroundColor: currentTheme.card }]}>
     <View style={styles.todoInfoContainer}>
       <Checkbox
         value={todo.isDone}
-        color={todo.isDone ? "#3599ea" : undefined}
+        color={todo.isDone ? currentTheme.primary : undefined}
         onValueChange={() => handleDone(todo.id)}
         style={{ borderRadius: 4 }}
       />
       <Text
         style={[
           styles.todoText,
+          { color: currentTheme.text },
           todo.isDone && { textDecorationLine: "line-through" },
         ]}
       >
@@ -230,7 +277,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    backgroundColor: "f5f5f5",
   },
 
   header: {
@@ -243,7 +289,6 @@ const styles = StyleSheet.create({
 
   searchBar: {
     flexDirection: "row",
-    backgroundColor: "#fff",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === "ios" ? 16 : 8,
@@ -255,10 +300,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#333",
   },
   todoContainer: {
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 10,
     marginBottom: 20,
@@ -274,7 +317,6 @@ const styles = StyleSheet.create({
 
   todoText: {
     fontSize: 16,
-    color: "#333",
   },
 
   footer: {
@@ -285,14 +327,11 @@ const styles = StyleSheet.create({
   },
   newTodoInput: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 10,
     fontSize: 16,
-    color: "#333",
   },
   addButton: {
-    backgroundColor: "#3599ea",
     padding: 8,
     borderRadius: 10,
     marginLeft: 20,
