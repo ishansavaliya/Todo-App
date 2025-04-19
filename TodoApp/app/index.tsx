@@ -3,6 +3,7 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -52,6 +53,8 @@ export default function Index() {
 
   const [todos, setTodos] = useState<ToDoType[]>([]);
   const [todoText, setTodoText] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [oldTodos, setOldTodos] = useState<ToDoType[]>([]);
 
   useEffect(() => {
     const getTodos = async () => {
@@ -59,7 +62,7 @@ export default function Index() {
         const todos = await AsyncStorage.getItem("my-todo");
         if (todos !== null) {
           setTodos(JSON.parse(todos));
-          // setOldTodos(JSON.parse(todos));
+          setOldTodos(JSON.parse(todos));
         }
       } catch (error) {
         console.log(error);
@@ -78,6 +81,7 @@ export default function Index() {
 
       todos.push(newTodo);
       setTodos(todos);
+      setOldTodos(todos);
       await AsyncStorage.setItem("my-todo", JSON.stringify(todos));
       setTodoText("");
       Keyboard.dismiss();
@@ -91,7 +95,7 @@ export default function Index() {
       const newTodos = todos.filter((todo) => todo.id !== id);
       await AsyncStorage.setItem("my-todo", JSON.stringify(newTodos));
       setTodos(newTodos);
-      // setOldTodos(newTodos);
+      setOldTodos(newTodos);
     } catch (error) {
       console.log(error);
     }
@@ -106,11 +110,26 @@ export default function Index() {
       });
       await AsyncStorage.setItem("my-todo", JSON.stringify(newTodos));
       setTodos(newTodos);
-      // setOldTodos(newTodos);
+      setOldTodos(newTodos);
     } catch (error) {
       console.log(error);
     }
   };
+
+  const onSearch = (query: string) => {
+    if (query == "") {
+      setTodos(oldTodos);
+    } else {
+      const filteredTodos = todos.filter((todo) =>
+        todo.title.toLowerCase().includes(query.toLowerCase())
+      );
+      setTodos(filteredTodos);
+    }
+  };
+
+  useEffect(() => {
+    onSearch(searchQuery);
+  }, [searchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,6 +150,8 @@ export default function Index() {
         <Ionicons name="search" size={24} color="#333" />
         <TextInput
           placeholder="Search"
+          value={searchQuery}
+          onChangeText={(text) => setSearchQuery(text)}
           style={styles.searchInput}
           clearButtonMode="always"
         />
@@ -221,10 +242,11 @@ const styles = StyleSheet.create({
   },
 
   searchBar: {
-    backgroundColor: "#fff",
     flexDirection: "row",
+    backgroundColor: "#fff",
     alignItems: "center",
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === "ios" ? 16 : 8,
     borderRadius: 10,
     gap: 10,
     marginBottom: 20,
