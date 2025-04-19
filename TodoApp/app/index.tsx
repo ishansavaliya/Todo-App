@@ -1,6 +1,7 @@
 import {
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   StyleSheet,
   Text,
@@ -11,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Checkbox } from "expo-checkbox";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ToDoType = {
   id: number;
@@ -46,6 +49,69 @@ export default function Index() {
       isDone: false,
     },
   ];
+
+  const [todos, setTodos] = useState<ToDoType[]>([]);
+  const [todoText, setTodoText] = useState<string>("");
+
+  useEffect(() => {
+    const getTodos = async () => {
+      try {
+        const todos = await AsyncStorage.getItem("my-todo");
+        if (todos !== null) {
+          setTodos(JSON.parse(todos));
+          // setOldTodos(JSON.parse(todos));
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getTodos();
+  }, []);
+
+  const addTodo = async () => {
+    try {
+      const newTodo = {
+        id: Math.random(),
+        title: todoText,
+        isDone: false,
+      };
+
+      todos.push(newTodo);
+      setTodos(todos);
+      await AsyncStorage.setItem("my-todo", JSON.stringify(todos));
+      setTodoText("");
+      Keyboard.dismiss();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const deleteTodo = async (id: number) => {
+    try {
+      const newTodos = todos.filter((todo) => todo.id !== id);
+      await AsyncStorage.setItem("my-todo", JSON.stringify(newTodos));
+      setTodos(newTodos);
+      // setOldTodos(newTodos);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handleDone = async (id: number) => {
+    try {
+      const newTodos = todos.map((todo) => {
+        if (todo.id === id) {
+          todo.isDone = !todo.isDone;
+        }
+        return todo;
+      });
+      await AsyncStorage.setItem("my-todo", JSON.stringify(newTodos));
+      setTodos(newTodos);
+      // setOldTodos(newTodos);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -71,9 +137,15 @@ export default function Index() {
       </View>
 
       <FlatList
-        data={todoData}
+        data={[...todos].reverse()}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <ToDoItem todo={item} />}
+        renderItem={({ item }) => (
+          <ToDoItem
+            todo={item}
+            deleteTodo={deleteTodo}
+            handleDone={handleDone}
+          />
+        )}
       />
 
       <KeyboardAvoidingView
@@ -81,8 +153,14 @@ export default function Index() {
         behavior="padding"
         keyboardVerticalOffset={10}
       >
-        <TextInput placeholder="Add new ToDo" style={styles.newTodoInput} />
-        <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+        <TextInput
+          placeholder="Add New ToDo"
+          value={todoText}
+          onChangeText={(Text) => setTodoText(Text)}
+          style={styles.newTodoInput}
+          autoCorrect={false}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={() => addTodo()}>
           <Ionicons name="add" size={34} color="#fff" />
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -90,13 +168,22 @@ export default function Index() {
   );
 }
 
-const ToDoItem = ({ todo }: { todo: ToDoType }) => (
+const ToDoItem = ({
+  todo,
+  deleteTodo,
+  handleDone,
+}: {
+  todo: ToDoType;
+  deleteTodo: (id: number) => void;
+  handleDone: (id: number) => void;
+}) => (
   <View style={styles.todoContainer}>
     <View style={styles.todoInfoContainer}>
       <Checkbox
         value={todo.isDone}
         color={todo.isDone ? "#3599ea" : undefined}
-        style={{ borderRadius: 2 }}
+        onValueChange={() => handleDone(todo.id)}
+        style={{ borderRadius: 4 }}
       />
       <Text
         style={[
@@ -109,7 +196,8 @@ const ToDoItem = ({ todo }: { todo: ToDoType }) => (
     </View>
     <TouchableOpacity
       onPress={() => {
-        alert("Deleted " + todo.id);
+        deleteTodo(todo.id);
+        alert("ToDo Deleted");
       }}
     >
       <Ionicons name="trash" size={24} color="red" />
@@ -171,6 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 30,
   },
   newTodoInput: {
     flex: 1,
