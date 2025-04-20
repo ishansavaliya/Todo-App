@@ -61,9 +61,9 @@ A modern, feature-rich Todo application built with React Native and Expo, design
 
 ## 📸 App Screenshots
 
-![Todo App Screenshot]
-![Light Mode](Screenshot_1745127971.png)
-![Dark-mode](Screenshot_1745127976.png)
+![Screenshot_1745127971](https://github.com/user-attachments/assets/f462edbf-60bc-4be7-af9b-c19d06c08720)
+
+![Screenshot_1745127976](https://github.com/user-attachments/assets/a8368ea9-73cb-479a-89b7-90a84d191040)
 
 
 ## 🧩 Project Structure
